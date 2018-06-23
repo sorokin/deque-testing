@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <utility>
 #include <iterator>
+#include <type_traits>
 
 namespace my {
     template<typename T>
@@ -49,10 +50,11 @@ namespace my {
         public:
             explicit iterator_buf() {}
 
-            template<bool W>
-            iterator_buf(iterator_buf<W> const &other) : ptr(other.ptr),
-                                                         extreme_left(other.extreme_left),
-                                                         extreme_right(other.extreme_right) {}
+            template<bool is_const2, typename SFINAE = typename std::enable_if<is_const || !is_const2>::type>
+            iterator_buf(iterator_buf<is_const2> const &other)
+                    : ptr(other.ptr),
+                      extreme_left(other.extreme_left),
+                      extreme_right(other.extreme_right) {}
 
 
             reference operator*() {
@@ -71,14 +73,14 @@ namespace my {
                 return &operator*();
             }
 
-            template<bool W>
+            /*template<bool W>
             iterator_buf &operator=(iterator_buf<W> const &other) {
                 iterator_buf tmp(other);
                 std::swap(tmp.ptr, ptr);
                 std::swap(tmp.extreme_left, extreme_left);
                 std::swap(tmp.extreme_right, extreme_right);
                 return *this;
-            }
+            }*/
 
             iterator_buf &operator++() {
                 ++ptr;
@@ -136,11 +138,23 @@ namespace my {
                 return ret;
             }
 
-            bool operator==(iterator_buf const &it2) {
+            bool operator==(iterator_buf<true> const &it2) const {
                 return ptr == it2.ptr;
             }
 
-            bool operator!=(iterator_buf const &it2) {
+            bool operator==(iterator_buf<false> const &it2) const {
+                return ptr == it2.ptr;
+            }
+
+            /*bool operator==(iterator_buf const &it2) const {
+                return ptr == it2.ptr;
+            }*/
+
+            bool operator!=(iterator_buf<true> const &it2) const {
+                return ptr != it2.ptr;
+            }
+
+            bool operator!=(iterator_buf<false> const &it2) const {
                 return ptr != it2.ptr;
             }
 
@@ -204,6 +218,10 @@ namespace my {
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
         iterator begin() {
+            if (capacity == 0) {
+                return iterator(nullptr, nullptr, nullptr);
+            }
+
             return iterator(data + start, data, data + capacity);
         }
 
@@ -212,6 +230,9 @@ namespace my {
         }
 
         iterator end() {
+            if (capacity == 0) {
+                return iterator(nullptr, nullptr, nullptr);
+            }
             return iterator(data + (start + size_) % capacity, data, data + capacity);
         }
 
@@ -220,6 +241,9 @@ namespace my {
         }
 
         const_iterator begin() const {
+            if (capacity == 0) {
+                return iterator(nullptr, nullptr, nullptr);
+            }
             return const_iterator(data + start, data, data + capacity);
         }
 
@@ -228,6 +252,9 @@ namespace my {
         }
 
         const_iterator end() const {
+            if (capacity == 0) {
+                return iterator(nullptr, nullptr, nullptr);
+            }
             return const_iterator(data + (start + size_) % capacity, data, data + capacity);
         }
 
@@ -235,7 +262,7 @@ namespace my {
             return const_reverse_iterator(begin());
         }
 
-        circular_buffer() : capacity(2), size_(0), start(0), data((T*) operator new(capacity * sizeof(T))) {}
+        circular_buffer() noexcept : capacity(0), size_(0), start(0), data(nullptr) {}
 
         circular_buffer(circular_buffer const& other) : capacity(other.capacity), size_(other.size_), start(0) {
             data = (T*) operator new(other.capacity * sizeof(T));
@@ -294,11 +321,26 @@ namespace my {
         }
 
         void push_back(T const& val) {
-            if (size_ + 1 >= capacity) {
-                resize_x2();
+            if (capacity == 0) {
+                capacity = 2;
+                size_ = 1;
+                start = 0;
+
+                data = (T*) operator new(capacity * sizeof(T));
+
+                try {
+                    new(data) T(val);
+                } catch (...) {
+                    (data) -> ~T();
+                    operator delete(data);
+                }
+            } else {
+                if (size_ + 1 >= capacity) {
+                    resize_x2();
+                }
+                new(data + (start + size_) % capacity) T(val);
+                ++size_;
             }
-            new(data + (start + size_) % capacity) T(val);
-            ++size_;
         }
 
         T& front() noexcept {
@@ -319,12 +361,27 @@ namespace my {
         }
 
         void push_front(T const& val) {
-            if (size_ + 1 >= capacity) {
-                resize_x2();
+            if (capacity == 0) {
+                capacity = 2;
+                size_ = 1;
+                start = 0;
+
+                data = (T*) operator new(capacity * sizeof(T));
+
+                try {
+                    new(data) T(val);
+                } catch (...) {
+                    (data) -> ~T();
+                    operator delete(data);
+                }
+            } else {
+                if (size_ + 1 >= capacity) {
+                    resize_x2();
+                }
+                start = (start + capacity - 1) % capacity;
+                new(data + start) T(val);
+                ++size_;
             }
-            start = (start + capacity - 1) % capacity;
-            new(data + start) T(val);
-            ++size_;
         }
 
         size_t size() const {
@@ -346,7 +403,7 @@ namespace my {
             if (it - begin() < (int) size_ / 2) {
                 ret = it + 1;
                 while (it != begin()) {
-                    iterator next = it--;
+                    iterator next = it - 1;
                     std::swap(*it, *next);
                     it = next;
                 }
