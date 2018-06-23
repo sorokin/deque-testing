@@ -7,6 +7,8 @@
 
 #include <assert.h>
 #include <cstddef>
+#include <utility>
+#include <iterator>
 
 namespace my {
     template<typename T>
@@ -23,15 +25,23 @@ namespace my {
     template<typename T>
     struct circular_buffer {
 
-        template<typename V>
-        struct iterator_buf : std::iterator<std::random_access_iterator_tag, V> {
+        template<bool is_const>
+        struct iterator_buf {
             friend circular_buffer;
 
-        private:
-            T *ptr;
-            T *extreme_left, *extreme_right;
+            using iterator_category = std::random_access_iterator_tag;
+            using value_type = T;
+            using difference_type  = ptrdiff_t ;
+            using pointer = std::conditional_t<is_const, value_type const *, value_type *>;
+            using reference  = std::conditional_t<is_const, value_type const &, value_type &>;
 
-            iterator_buf(T *ptr, T *extreme_left, T *extreme_right) :
+
+        private:
+            T* ptr;
+            T* extreme_left;
+            T* extreme_right;
+
+            iterator_buf(T* ptr, T* extreme_left, T* extreme_right) :
                     ptr(ptr),
                     extreme_left(extreme_left),
                     extreme_right(extreme_right) {}
@@ -39,25 +49,29 @@ namespace my {
         public:
             explicit iterator_buf() {}
 
-            template<typename W>
+            template<bool W>
             iterator_buf(iterator_buf<W> const &other) : ptr(other.ptr),
                                                          extreme_left(other.extreme_left),
                                                          extreme_right(other.extreme_right) {}
 
 
-            V &operator*() {
+            reference operator*() {
                 return *ptr;
             }
 
-            V const &operator*() const {
+            reference const operator*() const {
                 return *ptr;
             }
 
-            V const &operator->() const {
+            reference operator->() {
                 return &operator*();
             }
 
-            template<typename W>
+            reference const operator->() const {
+                return &operator*();
+            }
+
+            template<bool W>
             iterator_buf &operator=(iterator_buf<W> const &other) {
                 iterator_buf tmp(other);
                 std::swap(tmp.ptr, ptr);
@@ -122,16 +136,32 @@ namespace my {
                 return ret;
             }
 
-            friend bool operator==(iterator_buf const &it1, iterator_buf const &it2) {
-                return it1.ptr == it2.ptr;
+            bool operator==(iterator_buf const &it2) {
+                return ptr == it2.ptr;
             }
 
-            friend bool operator!=(iterator_buf const &it1, iterator_buf const &it2) {
-                return it1.ptr != it2.ptr;
+            bool operator!=(iterator_buf const &it2) {
+                return ptr != it2.ptr;
             }
 
-            friend ptrdiff_t operator-(iterator_buf const &it1, iterator_buf const &it2) {
-                return it1.ptr - it2.ptr;
+            difference_type operator-(iterator_buf const &it2) {
+                return ptr - it2.ptr;
+            }
+
+            bool operator>(iterator_buf const &it2) {
+                return (ptr - it2.ptr) > 0;
+            }
+
+            bool operator>=(iterator_buf const &it2) {
+                return (ptr - it2.ptr) >= 0;
+            }
+
+            bool operator<(iterator_buf const &it2) {
+                return (ptr - it2.ptr) < 0;
+            }
+
+            bool operator<=(iterator_buf const &it2) {
+                return (ptr - it2.ptr) <= 0;
             }
         };
 
@@ -168,8 +198,8 @@ namespace my {
 
     public:
 
-        typedef iterator_buf<T> iterator;
-        typedef iterator_buf<const T> const_iterator;
+        typedef iterator_buf<false> iterator;
+        typedef iterator_buf<true> const_iterator;
         typedef std::reverse_iterator<iterator> reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
@@ -177,16 +207,32 @@ namespace my {
             return iterator(data + start, data, data + capacity);
         }
 
+        reverse_iterator rbegin() {
+            return reverse_iterator(end());
+        }
+
         iterator end() {
             return iterator(data + (start + size_) % capacity, data, data + capacity);
+        }
+
+        reverse_iterator rend() {
+            return reverse_iterator(begin());
         }
 
         const_iterator begin() const {
             return const_iterator(data + start, data, data + capacity);
         }
 
+        const_reverse_iterator rbegin() const {
+            return const_reverse_iterator(end());
+        }
+
         const_iterator end() const {
             return const_iterator(data + (start + size_) % capacity, data, data + capacity);
+        }
+
+        const_reverse_iterator rend() const {
+            return const_reverse_iterator(begin());
         }
 
         circular_buffer() : capacity(2), size_(0), start(0), data((T*) operator new(capacity * sizeof(T))) {}
