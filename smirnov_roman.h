@@ -29,8 +29,16 @@ public:
     {
         buffer_start = reinterpret_cast<T *>(new char[sizeof(T) * other.buffer_size]);
         size_t ind = 0;
-        for (T &i : other) {
-            new(buffer_start + ind++)T(i);
+        for (ptrdiff_t i = 0; i < other.size(); i++) {
+            try {
+                new(buffer_start + ind++)T(*(other.begin() + i));
+            } catch (...) {
+                for (int j = 0; j < i; ++j) {
+                    (buffer_start + j)->~T();
+                }
+                delete[] reinterpret_cast<char *>(buffer_start);
+                throw;
+            }
         }
     }
 
@@ -246,18 +254,22 @@ public:
 
     iterator insert(const_iterator it, T const &item)
     {
+
         ptrdiff_t pos = it - begin();
         ensure_capacity(_size + 1);
         iterator tmp = iterator(buffer_start, buffer_size, pos, begin_shift);
-        if (_size - pos - 1 >=0) new(buffer_start + (begin_shift + pos + _size - pos - 1 + 1) % buffer_size)T(*(buffer_start
+        if (_size - pos - 1 >= 0) new(buffer_start + (begin_shift + pos + _size - pos - 1 + 1) % buffer_size)T(*(buffer_start
             + (begin_shift + pos + _size - pos - 1) % buffer_size));
-
         for (ptrdiff_t i = _size - pos - 2; i >= 0; --i) {
             *(buffer_start + (begin_shift + pos + i + 1) % buffer_size) = (*(buffer_start
                 + (begin_shift + pos + i) % buffer_size));
         }
-        new(&*(tmp))T(item);
-        *tmp = item;
+//        new(&*(tmp))T(item);
+        if (!empty()) {
+            *tmp = item;
+        } else {
+            new(&*(tmp))T(item);
+        }
         _size++;
         inc_end_shift();
         return tmp;
