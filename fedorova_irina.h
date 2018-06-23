@@ -333,7 +333,6 @@ namespace my {
                     size_ = 1;
                     start = 0;
                 } catch (...) {
-                    (data) -> ~T();
                     operator delete(data);
                 }
             } else {
@@ -374,7 +373,6 @@ namespace my {
                     start = 0;
 
                 } catch (...) {
-                    (data) -> ~T();
                     operator delete(data);
                 }
             } else {
