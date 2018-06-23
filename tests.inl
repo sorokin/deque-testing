@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "fault_injection.h"
 
 /*template <typename T>
 T const& as_const(T& obj)
@@ -383,7 +384,7 @@ TEST(correctness, size)
         EXPECT_EQ(i, c.size());
         c.push_back(42);
     }
-    EXPECT_EQ(10, c.size());
+    EXPECT_EQ(10u, c.size());
 }
 
 TEST(correctness, clear)
@@ -392,9 +393,9 @@ TEST(correctness, clear)
 
     container c;
     mass_push_back(c, {1, 2, 3, 4, 5, 6});
-    EXPECT_EQ(6, c.size());
+    EXPECT_EQ(6u, c.size());
     c.clear();
-    EXPECT_EQ(0, c.size());
+    EXPECT_EQ(0u, c.size());
     EXPECT_TRUE(c.empty());
     EXPECT_EQ(c.end(), c.begin());
 }
@@ -475,4 +476,152 @@ TEST(correctness, swap_iterator_validity)
     
     EXPECT_EQ(11, *c2_begin++);
     EXPECT_EQ(c2_end, c2_begin);
+}
+
+
+TEST(fault_injection, non_throwing_default_ctor)
+{
+    faulty_run([]
+    {
+        try
+        {
+            container();
+        }
+        catch (...)
+        {
+            fault_injection_disable dg;
+            ADD_FAILURE() << "default constructor throws";
+            throw;
+        }
+    });
+}
+
+TEST(fault_injection, copy_ctor)
+{
+    faulty_run([]
+    {
+        container c;
+        mass_push_back(c, {1, 2, 3, 4});
+        container c2 = c;
+        fault_injection_disable dg;
+        expect_eq(c, {1, 2, 3, 4});
+    });
+}
+
+TEST(fault_injection, non_throwing_clear)
+{
+    faulty_run([]
+    {
+        container c;
+        mass_push_back(c, {1, 2, 3, 4});
+        try
+        {
+            c.clear();
+        }
+        catch (...)
+        {
+            fault_injection_disable dg;
+            ADD_FAILURE() << "clear throws";
+            throw;
+        }
+    });
+}
+
+TEST(fault_injection, assignment_operator)
+{
+    faulty_run([]
+    {
+        container c;
+        mass_push_back(c, {1, 2, 3, 4});
+        container c2;
+        mass_push_back(c2, {5, 6, 7, 8});
+        
+        try
+        {
+            c = c2;
+        }
+        catch (...)
+        {
+            fault_injection_disable dg;
+            expect_eq(c, {1, 2, 3, 4});
+            throw;
+        }
+        
+        fault_injection_disable dg;
+        expect_eq(c, {5, 6, 7, 8});
+    });
+}
+
+TEST(fault_injection, push_back)
+{
+    faulty_run([]
+    {
+        container c;
+        mass_push_back(c, {1, 2, 3, 4});
+        
+        try
+        {
+            c.push_back(5);
+        }
+        catch (...)
+        {
+            fault_injection_disable dg;
+            expect_eq(c, {1, 2, 3, 4});
+            throw;
+        }
+        
+        fault_injection_disable dg;
+        expect_eq(c, {1, 2, 3, 4, 5});
+    });
+}
+
+TEST(fault_injection, push_front)
+{
+    faulty_run([]
+    {
+        container c;
+        mass_push_back(c, {1, 2, 3, 4});
+        
+        try
+        {
+            c.push_front(5);
+        }
+        catch (...)
+        {
+            fault_injection_disable dg;
+            expect_eq(c, {1, 2, 3, 4});
+            throw;
+        }
+        
+        fault_injection_disable dg;
+        expect_eq(c, {5, 1, 2, 3, 4});
+    });
+}
+
+TEST(fault_injection, insert)
+{
+    faulty_run([]
+    {
+        container c;
+        mass_push_back(c, {1, 2, 3, 4});
+        
+        c.insert(c.begin() + 2, 5);
+
+        fault_injection_disable dg;
+        expect_eq(c, {1, 2, 5, 3, 4});
+    });
+}
+
+TEST(fault_injection, erase)
+{
+    faulty_run([]
+    {
+        container c;
+        mass_push_back(c, {6, 3, 8, 2, 5, 7, 10});
+    
+        c.erase(c.begin() + 4);
+
+        fault_injection_disable dg;
+        expect_eq(c, {6, 3, 8, 2, 7, 10});
+    });
 }
