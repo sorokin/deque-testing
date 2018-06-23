@@ -227,7 +227,6 @@ public:
         return _size == 0;
     }
 
-
     void swap(circular_buffer &other)
     {
         std::swap(buffer_start, other.buffer_start);
@@ -254,12 +253,8 @@ public:
                 + (begin_shift + pos + i) % buffer_size));
             (buffer_start + (begin_shift + i) % buffer_size)->~T();
         }
-        if (end() == tmp) {
-            new(&*(tmp))T(item);
-        }
-        else {
-            *tmp = item;
-        }
+        new(&*(tmp))T(item);
+        *tmp = item;
         _size++;
         inc_end_shift();
         return tmp;
@@ -299,7 +294,7 @@ public:
     {
         _size--;
         begin()->~T();
-        end_shift++;
+        begin_shift++;
         begin_shift %= buffer_size;
     }
 
