@@ -324,14 +324,14 @@ namespace my {
 
         void push_back(T const& val) {
             if (capacity == 0) {
-                capacity = 2;
-                size_ = 1;
-                start = 0;
-
-                data = (T*) operator new(capacity * sizeof(T));
+                data = (T*) operator new(2 * sizeof(T));
 
                 try {
                     new(data) T(val);
+
+                    capacity = 2;
+                    size_ = 1;
+                    start = 0;
                 } catch (...) {
                     (data) -> ~T();
                     operator delete(data);
@@ -364,14 +364,15 @@ namespace my {
 
         void push_front(T const& val) {
             if (capacity == 0) {
-                capacity = 2;
-                size_ = 1;
-                start = 0;
-
-                data = (T*) operator new(capacity * sizeof(T));
+                data = (T*) operator new(2 * sizeof(T));
 
                 try {
                     new(data) T(val);
+
+                    capacity = 2;
+                    size_ = 1;
+                    start = 0;
+
                 } catch (...) {
                     (data) -> ~T();
                     operator delete(data);
