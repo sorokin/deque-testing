@@ -34,7 +34,8 @@ counted::~counted()
 
 counted& counted::operator=(counted const& c)
 {
-    EXPECT_TRUE(instances.find(this) != instances.end());
+    if (instances.find(this) == instances.end())
+        ADD_FAILURE() << "assignment operator call on non-existing object";
 
     data = c.data;
     return *this;
@@ -42,7 +43,8 @@ counted& counted::operator=(counted const& c)
 
 counted::operator int() const
 {
-    EXPECT_TRUE(instances.find(this) != instances.end());
+    if (instances.find(this) == instances.end())
+        ADD_FAILURE() << "accessing non-existing object";
 
     return data;
 }
