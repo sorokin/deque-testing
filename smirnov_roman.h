@@ -254,7 +254,6 @@ public:
 
     iterator insert(const_iterator it, T const &item)
     {
-
         ptrdiff_t pos = it - begin();
         ensure_capacity(_size + 1);
         iterator tmp = iterator(buffer_start, buffer_size, pos, begin_shift);
@@ -265,7 +264,7 @@ public:
                 + (begin_shift + pos + i) % buffer_size));
         }
 //        new(&*(tmp))T(item);
-        if (!empty()) {
+        if (it != end()) {
             *tmp = item;
         } else {
             new(&*(tmp))T(item);
@@ -362,9 +361,9 @@ public:
         return reverse_iterator(begin());
     }
 
-    ptrdiff_t size() const
+    size_t size() const
     {
-        return _size;
+        return size_t(_size) ;
     }
 
     const_reverse_iterator rbegin() const
