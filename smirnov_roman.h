@@ -241,6 +241,7 @@ public:
         for (T &i : *this) {
             (&i)->~T();
         }
+        _size = 0;
     }
 
     iterator insert(const_iterator it, T const &item)
@@ -356,7 +357,9 @@ private:
             for (ptrdiff_t i = 0; i < _size; ++i) {
                 new(new_data + i)T((*this)[i]);
             }
+            ptrdiff_t tmp_size = _size;
             clear();
+            _size = tmp_size;
             delete[]  reinterpret_cast<char *>(buffer_start);
             buffer_start = new_data;
             buffer_size = new_size * 2;
