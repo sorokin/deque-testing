@@ -7,7 +7,10 @@ counted::counted(int data)
 {
     auto p = instances.insert(this);
     if (!p.second)
+    {
+        fault_injection_disable dg;
         ADD_FAILURE() << "constructor call on already existing object";
+    }
 }
 
 counted::counted(counted const& other)
@@ -15,11 +18,15 @@ counted::counted(counted const& other)
 {
     auto p = instances.insert(this);
     if (!p.second)
+    {
+        fault_injection_disable dg;
         ADD_FAILURE() << "constructor call on already existing object";
+    }
 }
 
 counted::~counted()
 {
+    fault_injection_disable dg;
     size_t n = instances.erase(this);
     if (n != 1u)
         ADD_FAILURE() << "destructor call on non-existing object";
