@@ -151,7 +151,15 @@ public:
             return;
         data = reinterpret_cast<T *>(new char[sizeof(T) * capacity]);
         for (size_t i = 0, temp = left; i < other.size_; ++i, temp = (temp + 1) % capacity) {
-            push_back(other.data[temp]);
+            try {
+                push_back(other.data[temp]);
+            } catch (...) {
+                for (size_t j = 0, temp2 = left; j < i; ++j, temp2 = (temp2 + 1) % capacity) {
+                    data[temp2].~T();
+                }
+                delete[] reinterpret_cast<char *>(data);
+                throw;
+            }
         }
     }
 
@@ -193,8 +201,9 @@ public:
 
     void push_front(const T &dat) {
         ensure_capacity(size_ + 1);
-        left = (left - 1 + capacity) % capacity;
-        new(&data[left]) T(dat);
+        size_t buf = (left - 1 + capacity) % capacity;
+        new(&data[buf]) T(dat);
+        left = buf;
         ++size_;
     }
 
