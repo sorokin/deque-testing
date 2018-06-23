@@ -249,10 +249,12 @@ public:
         ptrdiff_t pos = it - begin();
         ensure_capacity(_size + 1);
         iterator tmp = iterator(buffer_start, buffer_size, pos, begin_shift);
-        for (ptrdiff_t i = _size - pos - 1; i >= 0; --i) {
-            new(buffer_start + (begin_shift + pos + i + 1) % buffer_size)T(*(buffer_start
+        if (_size - pos - 1 >=0) new(buffer_start + (begin_shift + pos + _size - pos - 1 + 1) % buffer_size)T(*(buffer_start
+            + (begin_shift + pos + _size - pos - 1) % buffer_size));
+
+        for (ptrdiff_t i = _size - pos - 2; i >= 0; --i) {
+            *(buffer_start + (begin_shift + pos + i + 1) % buffer_size) = (*(buffer_start
                 + (begin_shift + pos + i) % buffer_size));
-            (buffer_start + (begin_shift + pos + i) % buffer_size)->~T();
         }
         new(&*(tmp))T(item);
         *tmp = item;
@@ -263,12 +265,24 @@ public:
 
     iterator push_back(T item)
     {
-        return insert(end(), item);
+        ensure_capacity(_size + 1);
+        ptrdiff_t new_e = (end_shift + 1) % buffer_size;
+        new(buffer_start + end_shift)T(item);
+        _size++;
+        end_shift = new_e;
+//        return insert(end(), item);
+        return end();
     }
 
     iterator push_front(T item)
     {
-        return insert(begin(), item);
+        ensure_capacity(_size + 1);
+        ptrdiff_t new_b = begin_shift - 1;
+        if (new_b < 0) new_b = buffer_size - 1;
+        new(buffer_start + new_b)T(item);
+        _size++;
+        begin_shift = new_b;
+        return begin();
     }
 
     T &front()
@@ -353,18 +367,24 @@ private:
     void ensure_capacity(ptrdiff_t new_size)
     {
         if (new_size >= buffer_size) {
-            T *new_data = reinterpret_cast<T *>(new char[(new_size * 2) * sizeof(T)]);
-            for (ptrdiff_t i = 0; i < _size; ++i) {
-                new(new_data + i)T((*this)[i]);
+            circular_buffer other(new_size * 2);
+//            T *new_data = reinterpret_cast<T *>(new char[(new_size * 2) * sizeof(T)]);
+//            for (ptrdiff_t i = 0; i < _size; ++i) {
+//                new(new_data + i)T((*this)[i]);
+//            }
+            for(T& i : *this)
+            {
+                other.push_back(i);
             }
-            ptrdiff_t tmp_size = _size;
-            clear();
-            _size = tmp_size;
-            delete[]  reinterpret_cast<char *>(buffer_start);
-            buffer_start = new_data;
-            buffer_size = new_size * 2;
-            begin_shift = 0;
-            end_shift = _size;
+            this->swap(other);
+//            ptrdiff_t tmp_size = _size;
+//            clear();
+//            _size = tmp_size;
+//            delete[]  reinterpret_cast<char *>(buffer_start);
+//            buffer_start = new_data;
+//            buffer_size = new_size * 2;
+//            begin_shift = 0;
+//            end_shift = _size;
         }
     }
 
