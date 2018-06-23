@@ -13,7 +13,7 @@ struct circular_buffer
 {
 public:
     circular_buffer() noexcept
-        : buffer_start(nullptr), buffer_size(0), begin_shift(0), end_shift(0), size(0)
+        : buffer_start(nullptr), buffer_size(0), begin_shift(0), end_shift(0), _size(0)
     {};
 
     explicit circular_buffer(ptrdiff_t buffer_size)
@@ -21,11 +21,11 @@ public:
           buffer_size(buffer_size + 1),
           begin_shift(0),
           end_shift(0),
-          size(0)
+          _size(0)
     {};
 
     circular_buffer(const circular_buffer &other)
-        : buffer_size(other.buffer_size), begin_shift(0), end_shift(other.size), size(other.size)
+        : buffer_size(other.buffer_size), begin_shift(0), end_shift(other._size), _size(other._size)
     {
         buffer_start = reinterpret_cast<T *>(new char[sizeof(T) * other.buffer_size]);
         size_t ind = 0;
@@ -51,6 +51,12 @@ public:
     struct my_iterator
     {
         friend circular_buffer;
+        typedef std::bidirectional_iterator_tag iterator_category;
+        typedef std::ptrdiff_t difference_type;
+        typedef T value_type;
+        typedef T *pointer;
+        typedef T &reference;
+
     public:
         my_iterator(T *start, ptrdiff_t size, ptrdiff_t shift, ptrdiff_t begin_pos)
             : buffer_start(start), buffer_size(size), shift(shift), begin_pos(begin_pos)
@@ -167,7 +173,7 @@ public:
         }
         ptrdiff_t operator-(const my_iterator &other)
         {
-            return (get_begin_ptr() + shift - other.get_begin_ptr() - other.shift) % (buffer_size?buffer_size:1);
+            return (get_begin_ptr() + shift - other.get_begin_ptr() - other.shift) % (buffer_size ? buffer_size : 1);
         }
 
         friend bool operator==(const my_iterator &a, const my_iterator &b)
@@ -181,11 +187,11 @@ public:
     private:
         T *get_right_ptr() const
         {
-            return buffer_start + (begin_pos + buffer_size + shift) % (buffer_size?buffer_size:1);
+            return buffer_start + (begin_pos + buffer_size + shift) % (buffer_size ? buffer_size : 1);
         }
         T *get_begin_ptr() const
         {
-            return buffer_start + (begin_pos) % (buffer_size?buffer_size:1);
+            return buffer_start + (begin_pos) % (buffer_size ? buffer_size : 1);
         }
 
     private:
@@ -206,15 +212,21 @@ public:
         ptrdiff_t pos = it - begin();
         iterator tmp = begin() + pos;
 
-        for (ptrdiff_t i = pos + 1; i < size; ++i) {
+        for (ptrdiff_t i = pos + 1; i < _size; ++i) {
             (*this)[i - 1] = (*this)[i];
         }
         end_shift--;
         if (end_shift < 0) end_shift = buffer_size - 1;
         (buffer_start + end_shift)->~T();
-        size--;
+        _size--;
         return tmp;
     }
+
+    bool empty() const
+    {
+        return _size == 0;
+    }
+
 
     void swap(circular_buffer &other)
     {
@@ -222,7 +234,7 @@ public:
         std::swap(buffer_size, other.buffer_size);
         std::swap(begin_shift, other.begin_shift);
         std::swap(end_shift, other.end_shift);
-        std::swap(size, other.size);
+        std::swap(_size, other._size);
     }
 
     void clear()
@@ -235,10 +247,11 @@ public:
     iterator insert(const_iterator it, T const &item)
     {
         ptrdiff_t pos = it - begin();
-        ensure_capacity(size + 1);
+        ensure_capacity(_size + 1);
         iterator tmp = iterator(buffer_start, buffer_size, pos, begin_shift);
-        for (ptrdiff_t i = size - pos - 1; i >= 0; --i) {
-            new(buffer_start + (begin_shift + pos + i + 1) % buffer_size)T(*(buffer_start + (begin_shift+ pos + i) % buffer_size));
+        for (ptrdiff_t i = _size - pos - 1; i >= 0; --i) {
+            new(buffer_start + (begin_shift + pos + i + 1) % buffer_size)T(*(buffer_start
+                + (begin_shift + pos + i) % buffer_size));
             (buffer_start + (begin_shift + i) % buffer_size)->~T();
         }
         if (end() == tmp) {
@@ -247,7 +260,7 @@ public:
         else {
             *tmp = item;
         }
-        size++;
+        _size++;
         inc_end_shift();
         return tmp;
     }
@@ -266,21 +279,25 @@ public:
     {
         return (*this)[0];
     }
-    T &back()
+    const T &front() const
     {
-        return (*this)[size - 1];
+        return (*this)[0];
+    }
+    const T &back() const
+    {
+        return (*this)[_size - 1];
     }
 
     void pop_back()
     {
         end_shift--;
-        size--;
+        _size--;
         if (end_shift >= buffer_size) end_shift = buffer_size - 1;
         end()->~T();
     }
     void pop_front()
     {
-        size--;
+        _size--;
         begin()->~T();
         end_shift++;
         begin_shift %= buffer_size;
@@ -323,6 +340,11 @@ public:
         return reverse_iterator(begin());
     }
 
+    ptrdiff_t size() const
+    {
+        return _size;
+    }
+
     const_reverse_iterator rbegin() const
     {
         return const_reverse_iterator(end());
@@ -336,7 +358,7 @@ private:
     {
         if (new_size >= buffer_size) {
             T *new_data = reinterpret_cast<T *>(new char[(new_size * 2) * sizeof(T)]);
-            for (ptrdiff_t i = 0; i < size; ++i) {
+            for (ptrdiff_t i = 0; i < _size; ++i) {
                 new(new_data + i)T((*this)[i]);
             }
             clear();
@@ -344,7 +366,7 @@ private:
             buffer_start = new_data;
             buffer_size = new_size * 2;
             begin_shift = 0;
-            end_shift = size;
+            end_shift = _size;
         }
     }
 
@@ -358,7 +380,7 @@ private:
     ptrdiff_t buffer_size;
     ptrdiff_t begin_shift;
     ptrdiff_t end_shift;
-    ptrdiff_t size;
+    ptrdiff_t _size;
 };
 
 template<typename T>

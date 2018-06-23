@@ -17,5 +17,5 @@ target_link_libraries(std counted)
 add_executable(fedorova_irina fedorova_irina.cpp fedorova_irina.h)
 target_link_libraries(fedorova_irina counted gtest)
 
-#add_executable(smirnov_roman smirnov_roman.cpp smirnov_roman.h)
-#target_link_libraries(smirnov_roman counted gtest)
+add_executable(smirnov_roman smirnov_roman.cpp smirnov_roman.h)
+target_link_libraries(smirnov_roman counted gtest)
