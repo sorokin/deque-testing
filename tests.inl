@@ -505,6 +505,7 @@ TEST(fault_injection, copy_ctor)
         container c2 = c;
         fault_injection_disable dg;
         expect_eq(c, {1, 2, 3, 4});
+        expect_eq(c2, {1, 2, 3, 4});
     });
 }
 
