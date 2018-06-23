@@ -251,7 +251,7 @@ public:
         for (ptrdiff_t i = _size - pos - 1; i >= 0; --i) {
             new(buffer_start + (begin_shift + pos + i + 1) % buffer_size)T(*(buffer_start
                 + (begin_shift + pos + i) % buffer_size));
-            (buffer_start + (begin_shift + i) % buffer_size)->~T();
+            (buffer_start + (begin_shift + pos + i) % buffer_size)->~T();
         }
         new(&*(tmp))T(item);
         *tmp = item;
@@ -313,7 +313,7 @@ public:
     }
     iterator end()
     {
-        return iterator(buffer_start, buffer_size, 0, end_shift);
+        return iterator(buffer_start, buffer_size, _size, begin_shift);
     }
 
     const_iterator begin() const
@@ -323,7 +323,7 @@ public:
     }
     const_iterator end() const
     {
-        return const_iterator(buffer_start, buffer_size, 0, end_shift);
+        return const_iterator(buffer_start, buffer_size, _size, begin_shift);
     }
 
     reverse_iterator rbegin()
