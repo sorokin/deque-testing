@@ -281,11 +281,13 @@ namespace my {
         }
 
         ~circular_buffer() {
-            for (size_t i = 0; i < size_; ++i) {
-                (data + (start + i) % capacity) -> ~T();
+            if (capacity != 0) {
+                for (size_t i = 0; i < size_; ++i) {
+                    (data + (start + i) % capacity)->~T();
+                }
+                void *p = (void *) data;
+                operator delete(p);
             }
-            void* p = (void*) data;
-            operator delete(p);
         }
 
         circular_buffer& operator=(circular_buffer const& other) {
