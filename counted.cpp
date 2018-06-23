@@ -6,20 +6,23 @@ counted::counted(int data)
     : data(data)
 {
     auto p = instances.insert(this);
-    EXPECT_TRUE(p.second);
+    if (!p.second)
+        ADD_FAILURE() << "constructor call on already existing object";
 }
 
 counted::counted(counted const& other)
     : data(other.data)
 {
     auto p = instances.insert(this);
-    EXPECT_TRUE(p.second);
+    if (!p.second)
+        ADD_FAILURE() << "constructor call on already existing object";
 }
 
 counted::~counted()
 {
     size_t n = instances.erase(this);
-    EXPECT_EQ(1u, n);
+    if (n != 1u)
+        ADD_FAILURE() << "destructor call on non-existing object";
 }
 
 counted& counted::operator=(counted const& c)
