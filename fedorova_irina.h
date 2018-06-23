@@ -32,17 +32,17 @@ namespace my {
 
             using iterator_category = std::random_access_iterator_tag;
             using value_type = T;
-            using difference_type  = ptrdiff_t ;
+            using difference_type  = ptrdiff_t;
             using pointer = std::conditional_t<is_const, value_type const *, value_type *>;
             using reference  = std::conditional_t<is_const, value_type const &, value_type &>;
 
 
         private:
-            T* ptr;
-            T* extreme_left;
-            T* extreme_right;
+            T *ptr;
+            T *extreme_left;
+            T *extreme_right;
 
-            iterator_buf(T* ptr, T* extreme_left, T* extreme_right) :
+            iterator_buf(T *ptr, T *extreme_left, T *extreme_right) :
                     ptr(ptr),
                     extreme_left(extreme_left),
                     extreme_right(extreme_right) {}
@@ -191,8 +191,8 @@ namespace my {
         }
 
         circular_buffer(circular_buffer const &other, size_t new_capacity) {
-            data = (T*) operator new(new_capacity * sizeof(T));
             assert(new_capacity > other.capacity);
+            data = (T *) operator new(new_capacity * sizeof(T));
             capacity = new_capacity;
             size_ = other.size_;
             start = 0;
@@ -204,7 +204,7 @@ namespace my {
                 }
             } catch (...) {
                 for (size_t j = 0; j < i; ++j) {
-                    (data + j) -> ~T();
+                    (data + j)->~T();
                 }
                 operator delete(data);
                 throw;
@@ -265,8 +265,8 @@ namespace my {
 
         circular_buffer() noexcept : capacity(0), size_(0), start(0), data(nullptr) {}
 
-        circular_buffer(circular_buffer const& other) : capacity(other.capacity), size_(other.size_), start(0) {
-            data = (T*) operator new(other.capacity * sizeof(T));
+        circular_buffer(circular_buffer const &other) : capacity(other.capacity), size_(other.size_), start(0) {
+            data = (T *) operator new(other.capacity * sizeof(T));
             size_t i = 0;
             try {
                 for (auto it = other.begin(); it != other.end(); ++it) {
@@ -275,7 +275,7 @@ namespace my {
                 }
             } catch (...) {
                 for (size_t j = 0; j < i; ++j) {
-                    (data + j) -> ~T();
+                    (data + j)->~T();
                 }
                 operator delete(data);
                 throw;
@@ -292,7 +292,7 @@ namespace my {
             }
         }
 
-        circular_buffer& operator=(circular_buffer const& other) {
+        circular_buffer &operator=(circular_buffer const &other) {
             circular_buffer tmp(other);
             swap(*this, tmp);
             return *this;
@@ -308,12 +308,12 @@ namespace my {
             }
         }
 
-        T& back() noexcept {
+        T &back() noexcept {
             assert(size_ && "can't back, size == 0");
             return data[(start + size_ - 1) % capacity];
         }
 
-        T const& back() const noexcept {
+        T const &back() const noexcept {
             assert(size_ && "can't back, size == 0");
             return data[(start + size_ - 1) % capacity];
         }
@@ -321,12 +321,12 @@ namespace my {
         void pop_back() {
             assert(size_ && "can't push_back(), size == 0");
             --size_;
-            (data + (start + size_) % capacity) -> ~T();
+            (data + (start + size_) % capacity)->~T();
         }
 
-        void push_back(T const& val) {
+        void push_back(T const &val) {
             if (capacity == 0) {
-                data = (T*) operator new(2 * sizeof(T));
+                data = (T *) operator new(2 * sizeof(T));
 
                 try {
                     new(data) T(val);
@@ -340,33 +340,37 @@ namespace my {
                 }
             } else {
                 if (size_ + 1 >= capacity) {
-                    resize_x2();
+                    try {
+                        resize_x2();
+                    } catch (...) {
+                        throw;
+                    }
                 }
                 new(data + (start + size_) % capacity) T(val);
                 ++size_;
             }
         }
 
-        T& front() noexcept {
+        T &front() noexcept {
             assert(size_ && "can't front, size == 0");
             return data[start];
         }
 
-        T const& front() const noexcept {
+        T const &front() const noexcept {
             assert(size_ && "can't front, size == 0");
             return data[start];
         }
 
         void pop_front() noexcept {
             assert(size_ && "can't pop_front(), size == 0");
-            (data + start) -> ~T();
+            (data + start)->~T();
             start = (start + 1) % capacity;
             --size_;
         }
 
-        void push_front(T const& val) {
+        void push_front(T const &val) {
             if (capacity == 0) {
-                data = (T*) operator new(2 * sizeof(T));
+                data = (T *) operator new(2 * sizeof(T));
 
                 try {
                     new(data) T(val);
@@ -381,10 +385,15 @@ namespace my {
                 }
             } else {
                 if (size_ + 1 >= capacity) {
-                    resize_x2();
+                    try {
+                        resize_x2();
+                    } catch (...) {
+                        throw;
+                    }
                 }
-                start = (start + capacity - 1) % capacity;
-                new(data + start) T(val);
+                size_t new_start = (start + capacity - 1) % capacity;
+                new(data + new_start) T(val);
+                start = new_start;
                 ++size_;
             }
         }
@@ -393,12 +402,12 @@ namespace my {
             return size_;
         }
 
-        T& operator[](size_t ind) {
+        T &operator[](size_t ind) {
             assert(ind < size_ && "can'r [], ind > size");
             return data[(start + ind) % capacity];
         }
 
-        T const& operator[](size_t ind) const {
+        T const &operator[](size_t ind) const {
             assert(ind < size_ && "can'r [], ind > size");
             return data[(start + ind) % capacity];
         }
@@ -426,7 +435,7 @@ namespace my {
             return ret;
         }
 
-        iterator insert(iterator it, T const& val) {
+        iterator insert(iterator it, T const &val) {
             iterator ret;
             size_t pos = it - begin();
             if (pos < size_ / 2) {
