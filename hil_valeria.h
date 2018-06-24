@@ -37,7 +37,11 @@ struct circ_buff {
     }
 
     ~circ_buff() {
-        delete[] buffer;
+        for (auto& x : *this) {
+            x.~T();
+        }
+        void* p = (void *)buffer;
+        operator delete (p);
     }
 
     void clear() {
@@ -74,15 +78,16 @@ struct circ_buff {
 
     void push_back(T const &value) {
         ensure_capacity();
-        new (&buffer[tail_]) T(value);
+        new(&buffer[tail_]) T(value);
         ++tail_;
         tail_ %= capacity;
     }
 
     void push_front(T const &value) {
         ensure_capacity();
-        head_ = head_ == 0 ? (capacity - 1) : (head_ - 1);
-        buffer[head_] = value;
+        size_t head_copy = (head_ == 0) ? (capacity - 1) : (head_ - 1);
+        new(&buffer[head_copy]) T(value);
+        head_ = head_copy;
     }
 
     void pop_back() {
@@ -206,27 +211,35 @@ private:
             return;
         }
         size_t new_capacity = (capacity == 0) ? 2 : capacity * 2;
-        T *new_buff = static_cast<T *>(operator new[](sizeof(T) * new_capacity));
+        T *new_buff = static_cast<T *>(operator new(sizeof(T) * new_capacity));
+        size_t j = 0;
+        try {
+            if (tail_ > head_) {
+                for (size_t i = head_; i < tail_; i++) {
+                    new(&new_buff[j++]) T(buffer[i]);
+                }
+            } else {
+                for (size_t i = head_; i < capacity; i++) {
+                    new(&new_buff[j++]) T(buffer[i]);
+                }
+                for (size_t i = 0; i < tail_; i++) {
+                    new(&new_buff[j++]) T(buffer[i]);
+                }
+            }
 
-        if (tail_ > head_) {
-            for (size_t i = head_; i < tail_; i++) {
-                new_buff[i - head_] = buffer[i];
+            tail_ = size();
+            head_ = 0;
+            capacity = new_capacity;
+            void* p = (void *)buffer;
+            operator delete (p);
+            buffer = new_buff;
+        } catch (const std::exception &e) {
+            for (size_t i = 0; i < j; i++) {
+                new_buff[i].~T();
             }
-        } else {
-            size_t j = 0;
-            for (size_t i = head_; i < capacity; i++) {
-                new_buff[j++] = buffer[i];
-            }
-            for (size_t i = 0; i < tail_; i++) {
-                new_buff[j++] = buffer[i];
-            }
+            void* p = (void *)new_buff;
+            operator delete (p);
         }
-
-        tail_ = size();
-        head_ = 0;
-        capacity = new_capacity;
-        delete[] buffer;
-        buffer = new_buff;
     }
 
     size_t head_ = 0;
@@ -320,25 +333,25 @@ public:
     template<typename X>
     friend Iterator<X> operator-(Iterator<X> a, ptrdiff_t n);
 
-    template <typename X, typename Y>
+    template<typename X, typename Y>
     friend bool operator==(Iterator<X> const &a, Iterator<Y> const &b);
 
-    template <typename X, typename Y>
+    template<typename X, typename Y>
     friend bool operator!=(Iterator<X> const &a, Iterator<Y> const &b);
 
-    template <typename X, typename Y>
+    template<typename X, typename Y>
     friend bool operator<(Iterator<X> const &a, Iterator<Y> const &b);
 
-    template <typename X, typename Y>
+    template<typename X, typename Y>
     friend bool operator<=(Iterator<X> const &a, Iterator<Y> const &b);
 
-    template <typename X, typename Y>
+    template<typename X, typename Y>
     friend bool operator>(Iterator<X> const &a, Iterator<Y> const &b);
 
-    template <typename X, typename Y>
+    template<typename X, typename Y>
     friend bool operator>=(Iterator<X> const &a, Iterator<Y> const &b);
 
-    template <typename X, typename Y>
+    template<typename X, typename Y>
     friend ptrdiff_t operator-(Iterator<X> const &a, Iterator<Y> const &b);
 
 private:
@@ -385,27 +398,28 @@ template<typename X, typename Y>
 bool operator!=(Iterator<X> const &a, Iterator<Y> const &b) {
     return a.buffer != b.buffer || a.ind != b.ind;
 }
-template <typename X, typename Y>
+
+template<typename X, typename Y>
 bool operator<(Iterator<X> const &a, Iterator<Y> const &b) {
     return a.ind < b.ind;
 };
 
-template <typename X, typename Y>
+template<typename X, typename Y>
 bool operator<=(Iterator<X> const &a, Iterator<Y> const &b) {
     return a.ind <= b.ind;
 };
 
-template <typename X, typename Y>
+template<typename X, typename Y>
 bool operator>(Iterator<X> const &a, Iterator<Y> const &b) {
     return a.ind > b.ind;
 };
 
-template <typename X, typename Y>
+template<typename X, typename Y>
 bool operator>=(Iterator<X> const &a, Iterator<Y> const &b) {
     return a.ind >= b.ind;
 };
 
-template <typename X, typename Y>
+template<typename X, typename Y>
 ptrdiff_t operator-(Iterator<X> const &a, Iterator<Y> const &b) {
     return a.ind - b.ind;
 };
