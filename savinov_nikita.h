@@ -178,10 +178,10 @@ public:
     void pop_back();
     void pop_front();
 
-    T & front();
-    T & back();
+    T & front() const;
+    int & back() const;
 
-    T & operator[](size_t);
+    T & operator[](size_t) const;
 
     iterator insert(const_iterator, T const &);
     iterator erase(const_iterator);
@@ -295,7 +295,7 @@ void my_deq<T>::push_back(const T & value) {
     if (size_ == 0) {
         new (data_) T(value);
     } else {
-        tail_ = (++tail_ % capacity_);
+        tail_ = (tail_ + 1) % capacity_;
         new (data_ + tail_) T(value);
     }
 
@@ -331,20 +331,20 @@ void my_deq<T>::pop_front() {
     assert(size_ > 0);
 
     data_[head_].~T();
-    head_ = (++head_ % capacity_);
+    head_ = (head_ + 1) % capacity_;
     size_--;
     fixup();
 }
 
 template<typename T>
-T &my_deq<T>::front() {
+T &my_deq<T>::front() const {
     assert(size_ > 0);
 
     return data_[head_];
 }
 
 template<typename T>
-T &my_deq<T>::back() {
+int & my_deq<T>::back() const {
     assert(size_ > 0);
 
     return data_[tail_];
@@ -373,7 +373,7 @@ void my_deq<T>::fixup() {
 }
 
 template<typename T>
-T &my_deq<T>::operator[](size_t pos) {
+T &my_deq<T>::operator[](size_t pos) const {
     assert(pos < size_);
 
     return data_[(head_ + pos) % capacity_];
