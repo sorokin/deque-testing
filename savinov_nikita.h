@@ -179,7 +179,7 @@ public:
     void pop_front();
 
     T & front() const;
-    int & back() const;
+    T & back() const;
 
     T & operator[](size_t) const;
 
@@ -344,7 +344,7 @@ T &my_deq<T>::front() const {
 }
 
 template<typename T>
-int & my_deq<T>::back() const {
+T &my_deq<T>::back() const {
     assert(size_ > 0);
 
     return data_[tail_];
