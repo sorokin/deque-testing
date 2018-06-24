@@ -21,7 +21,10 @@ public:
 	circular_buffer() : buffer(nullptr), capacity(0), head(0), tail(0){}
 	circular_buffer(circular_buffer const &other): circular_buffer()
 	{
-		for (const_iterator it = other.begin(); it != other.end(); it++) { push_back(*it); }
+		if (!other.empty())
+		{
+			for (const_iterator it = other.begin(); it != other.end(); it++) { push_back(T(*it)); }
+		}
 	}
 	circular_buffer& operator=(circular_buffer const &other)
 	{
@@ -45,13 +48,13 @@ public:
 			return (capacity - head + tail);
 		}
 	}
-	void push_back(T elem)
+	void push_back(T const &elem)
 	{
 		ensure_capacity();
 		new (&buffer[tail++]) T(elem);
 		tail %= capacity;
 	}
-	void push_front(T elem)
+	void push_front(T const &elem)
 	{
 		ensure_capacity();
 		size_t head2 = head;
@@ -128,7 +131,7 @@ public:
 		}
 		else
 		{
-			for (size_t i = pos - const_iterator(begin()); i < size(); i++) { std::swap(operator[](i), operator[](i + 1)); }
+			for (size_t i = pos - const_iterator(begin()); i < size() - 1; i++) { std::swap(operator[](i), operator[](i + 1)); }
 			pop_back();
 		}
 		return iterator(buffer, pos - const_iterator(begin()), head, tail, capacity);
@@ -150,16 +153,13 @@ private:
 			if (size() == capacity - 1)
 			{
 				T* new_buffer = static_cast<T*>(operator new(sizeof(T) * 2 * capacity));
+				int j = 0;
 				try
 				{
-					if (head < tail)
-					{
-						for (size_t i = head; i < tail; i++) { new (&new_buffer[i - head]) T(buffer[i]); }
-					}
-					else
-					{
-						for (size_t i = head; i < capacity; i++) { new (&new_buffer[i - head]) T(buffer[i]); }
-						for (size_t i = 0; i < tail; i++) { new (&new_buffer[i + (capacity - head)]) T(buffer[i]); }
+					for (iterator it = begin(); it != end(); it++) 
+					{ 
+						new (&new_buffer[j]) T(*it); 
+						j++;
 					}
 					for (iterator it = begin(); it != end(); it++) (*it).~T();
 					tail = size();
@@ -170,6 +170,7 @@ private:
 				}
 				catch (std::runtime_error &e)
 				{
+					for (int i = 0; i <= j; i++) { new_buffer[i].~T(); }
 					operator delete(new_buffer);
 				}
 			}
