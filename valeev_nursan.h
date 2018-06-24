@@ -103,6 +103,10 @@ public:
         return arr[(_head + index + 1) % _capacity];
     }
 
+    T operator[](size_t const index) const {
+        return arr[(_head + index + 1) % _capacity];
+    }
+
     void push_front(T const& val) {
         ensureCapacity(_size + 1);
         new (&arr[_head]) T(val);
