@@ -227,8 +227,8 @@ my_deq<T>::my_deq():
         head_(0),
         tail_(0),
         size_(0),
-        capacity_(START_CAPACITY),
-        data_(static_cast<T*>(operator new(capacity_ * sizeof(T))))
+        capacity_(0),
+        data_(nullptr)
 {}
 
 template<typename T>
@@ -295,8 +295,9 @@ void my_deq<T>::push_back(const T & value) {
     if (size_ == 0) {
         new (data_) T(value);
     } else {
-        tail_ = (tail_ + 1) % capacity_;
-        new (data_ + tail_) T(value);
+        size_t copy_tail = (tail_ + 1) % capacity_;
+        new (data_ + copy_tail) T(value);
+        tail_ = copy_tail;
     }
 
     size_++;
@@ -309,8 +310,9 @@ void my_deq<T>::push_front(const T & value) {
     if (size_ == 0) {
         new (data_) T(value);
     } else {
-        head_ = (head_ != 0? head_ - 1 : capacity_ - 1);
-        new (data_ + head_) T(value);
+        size_t copy_head = (head_ != 0 ? head_ - 1 : capacity_ - 1);
+        new (data_ + copy_head) T(value);
+        head_ = copy_head;
     }
 
     size_++;
@@ -353,6 +355,12 @@ T &my_deq<T>::back() const {
 template<typename T>
 void my_deq<T>::ensure_capacity(size_t size) {
     if (size <= capacity_) {
+        return;
+    }
+
+    if (capacity_ == 0) {
+        capacity_ = 2;
+        data_ = static_cast<T*>(operator new(capacity_ * sizeof(T)));
         return;
     }
 
