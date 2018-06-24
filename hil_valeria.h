@@ -6,11 +6,12 @@
 #define CIRCULAR_BUFFER_CIRCULAR_BUFFER_H
 
 #include <iterator>
+#include <type_traits>
 
 template<typename T>
 struct circ_buff;
 
-template <typename U>
+template<typename U>
 struct Iterator;
 
 template<typename T>
@@ -29,11 +30,10 @@ struct circ_buff {
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     friend Iterator<T>;
-    friend void swap<T>(circ_buff& a, circ_buff& b) noexcept;
 
-    circ_buff() {
-        capacity = 2;
-        buffer = static_cast<T *>(operator new[](sizeof(T) * capacity));
+    friend void swap<T>(circ_buff &a, circ_buff &b) noexcept;
+
+    circ_buff() : buffer(nullptr), head_(0), tail_(0), capacity(0) {
     }
 
     ~circ_buff() {
@@ -74,7 +74,7 @@ struct circ_buff {
 
     void push_back(T const &value) {
         ensure_capacity();
-        buffer[tail_] = value;
+        new (&buffer[tail_]) T(value);
         ++tail_;
         tail_ %= capacity;
     }
@@ -127,7 +127,6 @@ struct circ_buff {
     }
 
     iterator insert(const_iterator pos, T const &value) {
-//        ensure_capacity();
         if (dist(head_, pos - begin()) + 1 < dist(pos - begin(), tail_)) {
             push_front(value);
             for (size_t i = 0; i < pos - begin(); i++) {
@@ -185,6 +184,7 @@ struct circ_buff {
     reverse_iterator rend() {
         return reverse_iterator(begin());
     }
+
     const_reverse_iterator rend() const {
         return const_reverse_iterator(begin());
     }
@@ -205,7 +205,7 @@ private:
         if (capacity - size() > 1) {
             return;
         }
-        size_t new_capacity = capacity * 2;
+        size_t new_capacity = (capacity == 0) ? 2 : capacity * 2;
         T *new_buff = static_cast<T *>(operator new[](sizeof(T) * new_capacity));
 
         if (tail_ > head_) {
@@ -246,21 +246,23 @@ public:
     using iterator_category = std::random_access_iterator_tag;
 
     friend circ_buff<U>;
-//    friend circ_buff<std::remove_const<U>>;
+    friend circ_buff<const U>;
+    friend circ_buff<typename std::remove_const_t<U>>;
+    friend Iterator<typename std::remove_const_t<U>>;
     friend Iterator<const U>;
 
 
     Iterator() : buffer(nullptr), ind(0), head_(0), tail_(0), capacity(0) {}
 
-    template <typename V>
-    Iterator(Iterator<V> const& other,
-             typename std::enable_if<std::is_same<V const, U>::value && std::is_const<U>::value>::type* = nullptr)
-    :buffer(other.buffer), ind(other.ind) {
+    template<typename V>
+    Iterator(Iterator<V> const &other,
+             typename std::enable_if<std::is_same<V const, U>::value && std::is_const<U>::value>::type * = nullptr)
+            :buffer(other.buffer), ind(other.ind) {
 
     }
 
-    template<typename W>
-    Iterator(Iterator<W> &other) : buffer(other.buffer), ind(other.ind), head_(other.head_), tail_(other.tail_) {}
+//    template<typename W>
+//    Iterator(Iterator<W> const &other) : buffer(other.buffer), ind(other.ind), head_(other.head_), tail_(other.tail_) {}
 
     Iterator &operator++() {
         ind++;
@@ -268,7 +270,7 @@ public:
     }
 
     Iterator operator++(int) {
-        Iterator tmp(buffer, ind);
+        Iterator tmp(buffer, head_, tail_, capacity, ind);
         ++(*this);
         return tmp;
     }
@@ -279,7 +281,7 @@ public:
     }
 
     Iterator operator--(int) {
-        Iterator tmp(buffer, ind);
+        Iterator tmp(buffer, head_, tail_, capacity, ind);
         --(*this);
         return tmp;
     }
@@ -296,58 +298,52 @@ public:
         return &buffer[ind];
     }
 
-    bool operator==(Iterator const &x) {
-        return buffer == x.buffer && ind == x.ind;
-    }
-
-    bool operator!=(Iterator const &x) {
-        return buffer != x.buffer || ind != x.ind;
-    }
-
-    bool operator<(Iterator const &b) {
-        return ind < b.ind;
-    }
-
-    bool operator<=(Iterator const &b) {
-        return ind <= b.ind;
-    }
-
-    bool operator>(Iterator const &b) {
-        return ind > b.ind;
-    }
-
-    bool operator>=(Iterator const &b) {
-        return ind >= b.ind;
-    }
-
-    Iterator& operator+=(ptrdiff_t n) {
+    Iterator &operator+=(ptrdiff_t n) {
         ind += n;
         return *this;
     }
 
-    Iterator& operator-=(ptrdiff_t n) {
+    Iterator &operator-=(ptrdiff_t n) {
         ind -= n;
         return *this;
     }
 
-    ptrdiff_t operator-(Iterator a) {
-        return ind - a.ind;
-    }
-
-    template <typename X>
+    template<typename X>
     friend Iterator<X> operator+(difference_type n, Iterator<X> a);
 
-    template <typename X>
+    template<typename X>
     friend Iterator<X> operator+(Iterator<X> a, ptrdiff_t n);
 
-    template <typename X>
+    template<typename X>
     friend Iterator<X> operator-(difference_type n, Iterator<X> a);
 
-    template <typename X>
+    template<typename X>
     friend Iterator<X> operator-(Iterator<X> a, ptrdiff_t n);
 
+    template <typename X, typename Y>
+    friend bool operator==(Iterator<X> const &a, Iterator<Y> const &b);
+
+    template <typename X, typename Y>
+    friend bool operator!=(Iterator<X> const &a, Iterator<Y> const &b);
+
+    template <typename X, typename Y>
+    friend bool operator<(Iterator<X> const &a, Iterator<Y> const &b);
+
+    template <typename X, typename Y>
+    friend bool operator<=(Iterator<X> const &a, Iterator<Y> const &b);
+
+    template <typename X, typename Y>
+    friend bool operator>(Iterator<X> const &a, Iterator<Y> const &b);
+
+    template <typename X, typename Y>
+    friend bool operator>=(Iterator<X> const &a, Iterator<Y> const &b);
+
+    template <typename X, typename Y>
+    friend ptrdiff_t operator-(Iterator<X> const &a, Iterator<Y> const &b);
+
 private:
-    Iterator(U *buffer, size_t head, size_t tail, size_t capacity, size_t ind) : buffer(buffer), capacity(capacity), head_(head), tail_(tail), ind(ind) {}
+    Iterator(U *buffer, size_t head, size_t tail, size_t capacity, size_t ind) : buffer(buffer), capacity(capacity),
+                                                                                 head_(head), tail_(tail), ind(ind) {}
 
     U *buffer;
     size_t head_;
@@ -356,27 +352,61 @@ private:
     size_t ind;
 };
 
-template <typename U>
+template<typename U>
 Iterator<U> operator+(ptrdiff_t n, Iterator<U> a) {
     a.ind += n;
     return a;
 }
 
-template <typename U>
+template<typename U>
 Iterator<U> operator+(Iterator<U> a, ptrdiff_t n) {
     a.ind += n;
     return a;
 }
 
-template <typename U>
+template<typename U>
 Iterator<U> operator-(ptrdiff_t n, Iterator<U> a) {
     a.ind -= n;
     return a;
 }
 
-template <typename U>
+template<typename U>
 Iterator<U> operator-(Iterator<U> a, ptrdiff_t n) {
     a.ind -= n;
     return a;
 }
+
+template<typename X, typename Y>
+bool operator==(Iterator<X> const &a, Iterator<Y> const &b) {
+    return a.buffer == b.buffer && a.ind == b.ind;
+};
+
+template<typename X, typename Y>
+bool operator!=(Iterator<X> const &a, Iterator<Y> const &b) {
+    return a.buffer != b.buffer || a.ind != b.ind;
+}
+template <typename X, typename Y>
+bool operator<(Iterator<X> const &a, Iterator<Y> const &b) {
+    return a.ind < b.ind;
+};
+
+template <typename X, typename Y>
+bool operator<=(Iterator<X> const &a, Iterator<Y> const &b) {
+    return a.ind <= b.ind;
+};
+
+template <typename X, typename Y>
+bool operator>(Iterator<X> const &a, Iterator<Y> const &b) {
+    return a.ind > b.ind;
+};
+
+template <typename X, typename Y>
+bool operator>=(Iterator<X> const &a, Iterator<Y> const &b) {
+    return a.ind >= b.ind;
+};
+
+template <typename X, typename Y>
+ptrdiff_t operator-(Iterator<X> const &a, Iterator<Y> const &b) {
+    return a.ind - b.ind;
+};
 #endif //CIRCULAR_BUFFER_CIRCULAR_BUFFER_H
