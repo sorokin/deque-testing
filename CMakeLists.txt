@@ -29,8 +29,8 @@ target_link_libraries(shelepov_anton counted gtest)
 add_executable(hil_valeria hil_valeria.cpp hil_valeria.h)
 target_link_libraries(hil_valeria counted gtest)
 
-#add_executable(sharipov_samariddin sharipov_samariddin.cpp sharipov_samariddin.h)
-#target_link_libraries(sharipov_samariddin counted gtest)
+add_executable(sharipov_samariddin sharipov_samariddin.cpp sharipov_samariddin.h)
+target_link_libraries(sharipov_samariddin counted gtest)
 
 add_executable(savinov_nikita savinov_nikita.cpp savinov_nikita.h)
 target_link_libraries(savinov_nikita counted gtest)
