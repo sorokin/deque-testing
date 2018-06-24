@@ -45,6 +45,9 @@ struct circ_buff {
     }
 
     void clear() {
+        for (auto& x : *this) {
+            x.~T();
+        }
         tail_ = 0;
         head_ = 0;
     }
@@ -92,9 +95,11 @@ struct circ_buff {
 
     void pop_back() {
         tail_ = tail_ == 0 ? (capacity - 1) : (tail_ - 1);
+        buffer[tail_].~T();
     }
 
     void pop_front() {
+        buffer[head_].~T();
         head_++;
         head_ %= capacity;
     }
@@ -226,7 +231,9 @@ private:
                     new(&new_buff[j++]) T(buffer[i]);
                 }
             }
-
+            for (auto& x: *this) {
+                x.~T();
+            }
             tail_ = size();
             head_ = 0;
             capacity = new_capacity;
