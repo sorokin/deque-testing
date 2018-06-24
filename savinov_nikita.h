@@ -475,7 +475,7 @@ typename my_deq<T>::iterator my_deq<T>::end() {
 
 template<typename T>
 typename my_deq<T>::const_iterator my_deq<T>::end() const {
-    return const_iterator(data_, size_ + 1, head_, capacity_);
+    return const_iterator(data_, size_, head_, capacity_);
 }
 
 template<typename T>
