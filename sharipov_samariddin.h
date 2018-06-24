@@ -16,6 +16,18 @@ public:
 
     struct iterator
     {
+        using difference_type = std::ptrdiff_t;
+        using value_type = T;
+        using pointer = T *;
+        using reference = T &;
+        using iterator_category = std::random_access_iterator_tag;
+        friend iterator operator+(iterator a, const int & b)  {
+            return a+=b;
+        }
+        friend iterator operator-(iterator a, const int & b)  {
+            return a-=b;
+        }
+
         friend const_iterator;
         iterator(T *ar, int pos, const int &cap){
             this->ar = ar;
@@ -40,11 +52,11 @@ public:
             return *this;
         }
 
-        bool operator==(const iterator &b){
+        bool operator==(const iterator &b) const{
             return (pos == b.pos && cap == b.cap && ar == b.ar);
         }
 
-        bool operator!=(const iterator &b){
+        bool operator!=(const iterator &b) const{
             return !(*this == b);
         }
 
@@ -55,9 +67,6 @@ public:
             return *this;
         }
 
-//        iterator operator+(iterator a, const int b){
-//            return a += b;
-//        }
 
         iterator operator++ (int){
 
@@ -76,10 +85,6 @@ public:
             return *this;
         }
 
-//        iterator operator-(iterator a, const int b)
-//        {
-//            return a -= b;
-//        }
 
 //        int operator-(iterator a, iterator b){
 //            return a.pos - b.pos;
@@ -115,40 +120,22 @@ public:
             return (pos <= a.pos);
         }
 
-
-
-
-//        friend bool operator==(iterator first, iterator second){
-//            return (first.pos == second.pos && first.ca_len == second.ca_len && first.ar == second.ar);
-//        }
-
-//        friend bool operator!=(iterator first, iterator second){
-//            return (first == second);
-//        }
-
-
-
         int position(){
             return pos;
         }
-
-//        bool operator==(const iterator &b){
-//            return (pos == b.pos && b.ar == ar && b.cap == cap);
-//        }
-
-//        bool operator!=(const iterator &b){
-//            return !(*this == b);
-//        }
-
 
     private:
         int* ar;
         int pos, cap;
     };
 
-
     struct const_iterator
     {
+        using difference_type = std::ptrdiff_t;
+        using value_type = const T;
+        using pointer = const T *;
+        using reference = const T &;
+        using iterator_category =const  std::random_access_iterator_tag;
         friend iterator;
         const_iterator(T *ar, int pos, const int &cap){
             this->ar = ar;
@@ -201,10 +188,6 @@ public:
             return *this;
         }
 
-//        const_iterator operator+(const_iterator a, const int b){
-//            return a += b;
-//        }
-
         const_iterator operator++ (int){
 
             const_iterator it = *this;
@@ -222,10 +205,6 @@ public:
             return *this;
         }
 
-//        const_iterator operator-(const_iterator a, const int b){
-//            return a -= b;
-//        }
-
         const_iterator operator--(int){
             const_iterator it = *this;
             --*this;
@@ -240,13 +219,6 @@ public:
         const T& operator*(){
             return ar[pos];
         }
-
-
-//        T* operator->() const {
-//            return (a + pos);
-//        }
-
-
 
         bool operator> (const_iterator a){
             return (pos > a.pos);
@@ -284,12 +256,15 @@ public:
 
 
     Array_List(){
-        a = static_cast<T*>(operator new[](sizeof(T) * 10));
+        a = static_cast<T*>(operator new(sizeof(T) * 10));
         ca_len = 10, len = 0;
         head = tail = 0;
     }
     ~Array_List(){
-        delete[] a;
+        for(const_iterator it = begin(); it != end(); it ++){
+            (*it).~T();
+        }
+        operator delete(a);
     }
 
     // void swap(T& A,T&B)
@@ -310,7 +285,7 @@ public:
         }
     }
 
-    void insert(const_iterator no, T const& value){
+    const_iterator insert(const_iterator no, T const& value){
         int x = no.position();
         int kol;
         if(x > head){
@@ -328,6 +303,7 @@ public:
                 t--;
                 t %= ca_len;
             }
+            return const_iterator(a, t, ca_len);
         } else{
             push_back(value);
             x = (head - kol + ca_len) % ca_len;
@@ -337,10 +313,11 @@ public:
                 t++;
                 t %= ca_len;
             }
+            return const_iterator(a, t, ca_len);
         }
     }
 
-    void erase(const_iterator no){
+    const_iterator erase(const_iterator no){
         int x = no.position();
         if(closer(x)){
             int t = x;
@@ -350,6 +327,7 @@ public:
                 t %= ca_len;
             }
             pop_front();
+            return const_iterator(a, (x - 1 + ca_len) % ca_len, ca_len);
         } else{
             int t = x;
             while(tail != t){
@@ -359,9 +337,11 @@ public:
                 t %= ca_len;
             }
             pop_back();
-        }
-    }
+            return const_iterator(a, x, ca_len);
 
+        }
+
+    }
     iterator begin(){
         return iterator(a, (head - 1 + ca_len) % ca_len, ca_len);
     }
@@ -403,32 +383,36 @@ public:
     }
 
     void clear(){
-        delete[] a;
-        a = static_cast<T*>(operator new[](sizeof(T) * 10));
-        ca_len = 10;len = 0;
-        head = tail = 0;
+       while(size() != 0){
+           pop_back();
+       }
     }
 
     void copy(){
-        T* new_a = static_cast<T*>(operator new[](sizeof(T) * ca_len * 2));
+        T* new_a = static_cast<T*>(operator new(sizeof(T) * ca_len * 2));
         int new_head = 0;
-        if(head >= tail){
-            for(int i = tail; i < head; i --){
-                new_a[new_head] = a[i];
-                new_head++;
+        try{
+            if(head >= tail){
+                for(int i = tail; i < head; i --){
+                    new (&new_a[new_head]) T (a[i]);
+                    new_head++;
+                }
+            } else{
+                for(int i = tail; i < ca_len; i ++){
+                    new (&new_a[new_head]) T (a[i]);
+                    new_head++;
+                }
+                for(int i = 0; i < head; i ++){
+                    new (&new_a[new_head]) T (a[i]);
+                    new_head++;
+                }
             }
-        } else{
-            for(int i = tail; i < ca_len; i ++){
-                new_a[new_head] = a[i];
-                new_head++;
-            }
-            for(int i = 0; i < head; i ++){
-                new_a[new_head] = a[i];
-                new_head++;
-            }
+        } catch (std::runtime_error &e){
+            operator delete(new_a);
         }
+
         ca_len *= 2;
-        delete[] a;
+        operator delete(a);
         a = new_a;
         head = new_head;
         tail = 0;
@@ -473,6 +457,7 @@ public:
             throw std::runtime_error("my_error1");
         } else{
             len--;
+            a[tail].~T();
             plus(tail);
         }
     }
@@ -483,6 +468,7 @@ public:
         } else{
             len--;
             minu(head);
+            a[head].~T();
         }
     }
 
@@ -521,9 +507,8 @@ public:
     size_t size(){
         return len;
     }
-
-    template <typename S>
-    void swap(Array_List<S> first, Array_List<S> second);
+    template<typename S>
+   friend void swap(Array_List<S>& first, Array_List<S>& second);
 
 private:
     T* a;
@@ -531,9 +516,18 @@ private:
 
 };
 
+/*template <typename T>
+typename Array_List<T>::iterator operator+(typename Array_List<T>::iterator a, const int & b) {
+    return a+=b;
+}*/
+
+/*template <typename T>
+typename Array_List<T>::iterator operator-(typename Array_List<T>::iterator a, const int & b) {
+    return a-=b;
+}*/
+
 template <typename T>
-void swap(Array_List<T> first, Array_List<T> second){
-    std::swap(first.pos, second.pos);
+void swap(Array_List<T>& first, Array_List<T>& second){
     std::swap(second.a, first.a);
     std::swap(second.ca_len, first.ca_len);
     std::swap(first.head, second.head);
