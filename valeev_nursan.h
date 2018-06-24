@@ -42,6 +42,9 @@ private:
         size_t newcapacity = (_capacity + 3) * 2;
         T* newarr = static_cast<T*>(operator new(sizeof(T) * newcapacity));
         memcp(arr, newarr);
+        while(!empty()) {
+            pop_back();
+        }
         clear();
         arr = newarr;
         _capacity = newcapacity;
@@ -115,6 +118,7 @@ public:
     }
 
     void pop_front() {
+        arr[getNextPos(_head)].~T();
         _head = getNextPos(_head);
         --_size;
     }
@@ -135,6 +139,7 @@ public:
     }
 
     void pop_back() {
+        arr[getPrevPos(_tail)].~T();
         _tail = getPrevPos(_tail);
         --_size;
     }
