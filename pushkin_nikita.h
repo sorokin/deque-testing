@@ -18,12 +18,23 @@ public:
 	using const_iterator = circular_iterator<const T>;
 	using reverse_iterator = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-	circular_buffer() : buffer(nullptr), capacity(0), head(0), tail(0) {}
+	circular_buffer() : buffer(nullptr), capacity(0), head(0), tail(0){}
+	circular_buffer(circular_buffer const &other): circular_buffer()
+	{
+		for (const_iterator it = other.begin(); it != other.end(); it++) { push_back(*it); }
+	}
+	circular_buffer& operator=(circular_buffer const &other)
+	{
+		circular_buffer tmp(other);
+		swap(*this, tmp);
+		return *this;
+	}
 	~circular_buffer()
 	{
-		delete[] buffer;
+		for (const_iterator it = begin(); it != end(); it++) { (*it).~T(); }
+		operator delete(buffer);
 	}
-	size_t size()
+	size_t size() const
 	{
 		if (tail >= head)
 		{
@@ -51,8 +62,13 @@ public:
 	}
 	void clear()
 	{
+		for (const_iterator it = begin(); it != end(); it++) { (*it).~T(); }
 		tail = 0;
 		head = 0;
+	}
+	bool empty() const
+	{
+		return size() == 0;
 	}
 	T& operator[](const size_t index)
 	{
@@ -64,42 +80,44 @@ public:
 		if (head < tail || capacity - head >= index) { return buffer[head + index]; }
 		else { return buffer[index - (capacity - head)]; }
 	}
-	T front() { return operator[](0); }
-	T back() { return operator[](size() - 1); }
-	T front() const { return operator[](0); }
-	T back() const { return operator[](size() - 1); }
-	iterator begin() { return iterator(buffer, 0, head, tail, capacity); }
-	iterator end() { return iterator(buffer, size(), head, tail, capacity); }
-	const_iterator begin() const { return const_iterator(buffer, 0, head, tail, capacity); }
-	const_iterator end() const { return const_iterator(buffer, size(), head, tail, capacity); }
-	reverse_iterator rbegin() { return reverse_iterator(end()); }
-	reverse_iterator rend() { return reverse_iterator(begin()); }
-	const_iterator rbegin() const { return const_reverse_iterator(end()); }
-	const_iterator rend() const { return const_reverse_iterator(begin()); }
+	T& front() { return operator[](0); }
+	T& back() { return operator[](size() - 1); }
+	T& front() const { return operator[](0); }
+	T& back() const { return operator[](size() - 1); }
+	iterator begin() { return iterator(buffer, 0, head, tail, capacity); } const
+	iterator end() { return iterator(buffer, size(), head, tail, capacity); } const
+	const_iterator begin() const { return const_iterator(buffer, 0, head, tail, capacity); } const
+	const_iterator end() const { return const_iterator(buffer, size(), head, tail, capacity); } const
+	reverse_iterator rbegin() { return reverse_iterator(end()); } const
+	reverse_iterator rend() { return reverse_iterator(begin()); } const
+	const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); } const
+	const_reverse_iterator rend() const { return const_reverse_iterator(begin()); } const
 	iterator insert(const_iterator pos, T const &value)
 	{
 		//ensure_capacity();
 		if (dist(head, pos.index) + 1 <= dist(pos.index, tail))
 		{
 			push_front(value);
-			for (size_t i = 0; i < pos - const_iterator(begin()); i++) { std::swap(operator[](i), operator[](i + 1)); }
+			for (int i = 0; i < pos - const_iterator(begin()); i++) { std::swap(operator[](i), operator[](i + 1)); }
 		}
 		else
 		{
 			push_back(value);
-			for (size_t i = size() - 1; i > pos - const_iterator(begin()); i--) { std::swap(operator[](i), operator[](i - 1)); }
+			for (int i = size() - 1; i > pos - const_iterator(begin()); i--) { std::swap(operator[](i), operator[](i - 1)); }
 		}
 		return iterator(buffer, pos - const_iterator(begin()), head, tail, capacity);
 	}
 	void pop_front()
 	{
+		buffer[head].~T();
 		head++;
 		head %= capacity;
 	}
 	void pop_back()
 	{
+		if(tail == 0) { tail = capacity - 1; }
 		tail--;
-		if (tail == -1) { tail = capacity - 1; }
+		buffer[tail].~T();
 	}
 	iterator erase(const_iterator pos)
 	{
@@ -124,14 +142,14 @@ private:
 	{
 		if (capacity == 0)
 		{
-			buffer = static_cast<T*>(operator new[](sizeof(T) * INIT_SIZE));
+			buffer = static_cast<T*>(operator new(sizeof(T) * INIT_SIZE));
 			capacity = INIT_SIZE;
 			head = tail = 0;
 		}
 		else
 			if (size() == capacity - 1)
 			{
-				T* new_buffer = static_cast<T*>(operator new[](sizeof(T) * 2 * capacity));
+				T* new_buffer = static_cast<T*>(operator new(sizeof(T) * 2 * capacity));
 				try
 				{
 					if (head < tail)
@@ -143,15 +161,16 @@ private:
 						for (size_t i = head; i < capacity; i++) { new (&new_buffer[i - head]) T(buffer[i]); }
 						for (size_t i = 0; i < tail; i++) { new (&new_buffer[i + (capacity - head)]) T(buffer[i]); }
 					}
+					for (iterator it = begin(); it != end(); it++) (*it).~T();
 					tail = size();
 					head = 0;
-					delete[] buffer;
+					operator delete(buffer);
 					buffer = new_buffer;
 					capacity *= 2;
 				}
 				catch (std::runtime_error &e)
 				{
-					delete new_buffer;
+					operator delete(new_buffer);
 				}
 			}
 	}
@@ -185,7 +204,6 @@ struct circular_iterator
 	circular_iterator(circular_iterator<V> const &other, typename std::enable_if<std::is_same<V const, U>::value && std::is_const<U>::value>::type* = nullptr) :
 		base(other.base), index(other.index), head(other.head), tail(other.tail), capacity(other.capacity) {}
 	//bool operator==(circular_iterator const other) const noexcept { return base == other.base && index == other.index; }
-	bool operator!=(circular_iterator const other) const noexcept { return !(*this == other); }
 	circular_iterator& operator++()
 	{
 		index++;
@@ -252,6 +270,8 @@ struct circular_iterator
 	friend bool operator<=(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept;
 	template <typename X, typename Y>
 	friend bool operator>=(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept;
+	template <typename X, typename Y>
+	friend bool operator!=(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept;
 	/*template <typename U1, typename V1>
 	friend std::enable_if_t<std::is_same_v<std::remove_const_t<U1>, std::remove_const_t<V1>>, ptrdiff_t> operator-(circular_iterator<U1> it1, circular_iterator<V1> it2);*/
 	template<typename X>
@@ -292,33 +312,17 @@ std::enable_if_t<std::is_same_v<std::remove_const_t<U>, std::remove_const_t<V>>,
 	return it2.index - it1.index;
 }*/
 template <typename U>
-ptrdiff_t operator-(circular_iterator<U> it1, circular_iterator<U> it2)
-{
-	return it1.index - it2.index;
-}
+ptrdiff_t operator-(circular_iterator<U> it1, circular_iterator<U> it2) { return it1.index - it2.index; }
 template <typename X, typename Y>
-bool operator==(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept
-{
-	return it1.base == it2.base && it1.index == it2.index;
-}
+bool operator==(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept { return it1.base == it2.base && it1.index == it2.index; }
 template <typename X, typename Y>
-bool operator<(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept
-{
-	return it1.index < it2.index;
-}
+bool operator<(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept { return it1.index < it2.index; }
 template <typename X, typename Y>
-bool operator>(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept
-{
-	return it1.index > it2.index;
-}
+bool operator>(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept { return it1.index > it2.index; }
 template <typename X, typename Y>
-bool operator<=(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept
-{
-	return it1.index <= it2.index;
-}
+bool operator<=(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept { return it1.index <= it2.index; }
 template <typename X, typename Y>
-bool operator>=(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept
-{
-	return it1.index >= it2.index;
-}
+bool operator>=(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept { return it1.index >= it2.index; }
+template <typename X, typename Y>
+bool operator!=(circular_iterator<X> const it1, circular_iterator<Y> const it2) noexcept { return it1.index != it2.index; }
 #endif
