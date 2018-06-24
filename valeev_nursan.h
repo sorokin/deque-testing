@@ -15,14 +15,14 @@ private:
     size_t _head, _tail;
     T* arr;
 
-    size_t getNextPos(size_t ind) {
+    size_t getNextPos(size_t ind) const {
         if (_capacity == 0) {
             return 0;
         }
         return (ind + 1) % _capacity;
     }
 
-    size_t getPrevPos(size_t ind) {
+    size_t getPrevPos(size_t ind) const {
         if (_capacity == 0) {
             return 0;
         }
@@ -100,6 +100,10 @@ public:
     }
 
     T operator[](size_t const index) {
+        return arr[(_head + index + 1) % _capacity];
+    }
+
+    T operator[](size_t const index) const {
         return arr[(_head + index + 1) % _capacity];
     }
 
@@ -354,6 +358,11 @@ circular_buffer<T>::buffer_iterator<T> circular_buffer<T>::erase(buffer_iterator
     }
     buffer_iterator<T> ans(pos.index, arr, _head, _capacity);
     return ans;
+}
+
+template<typename T>
+void swap(circular_buffer<T>& a, circular_buffer<T>& b) {
+    a.swap(b);
 }
 
 #endif
