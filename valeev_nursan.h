@@ -31,7 +31,7 @@ private:
 
     void memcp(T* src, T* dest) {
         for (size_t i = 0, j = _head; i < _size; ++i, ++j) {
-            dest[i] = src[getNextPos(j)];
+            new (&dest[i]) T(src[getNextPos(j)]);
         }
     }
 
@@ -103,13 +103,9 @@ public:
         return arr[(_head + index + 1) % _capacity];
     }
 
-    T operator[](size_t const index) const {
-        return arr[(_head + index + 1) % _capacity];
-    }
-
     void push_front(T const& val) {
         ensureCapacity(_size + 1);
-        arr[_head] = val;
+        new (&arr[_head]) T(val);
         _head = getPrevPos(_head);
         ++_size;
     }
@@ -129,7 +125,7 @@ public:
 
     void push_back(T const& val) {
         ensureCapacity(_size + 1);
-        arr[_tail] = val;
+        new (&arr[_tail]) T(val);
         _tail = getNextPos(_tail);
         ++_size;
     }
