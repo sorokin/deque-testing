@@ -264,7 +264,7 @@ public:
                 + (begin_shift + pos + i) % buffer_size));
         }
 //        new(&*(tmp))T(item);
-        if (it != end()) {
+        if (it != end() && !empty()) {
             *tmp = item;
         } else {
             new(&*(tmp))T(item);
