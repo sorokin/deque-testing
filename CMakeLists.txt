@@ -22,3 +22,6 @@ target_link_libraries(smirnov_roman counted gtest)
 
 add_executable(krivopaltsev_dmitriy krivopaltsev_dmitriy.cpp krivopaltsev_dmitriy.h)
 target_link_libraries(krivopaltsev_dmitriy counted gtest)
+
+add_executable(shelepov_anton shelepov_anton.cpp shelepov_anton.h)
+target_link_libraries(shelepov_anton counted gtest)
