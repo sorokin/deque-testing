@@ -34,3 +34,6 @@ target_link_libraries(hil_valeria counted gtest)
 
 add_executable(savinov_nikita savinov_nikita.cpp savinov_nikita.h)
 target_link_libraries(savinov_nikita counted gtest)
+
+add_executable(pushkin_nikita pushkin_nikita.cpp pushkin_nikita.h)
+target_link_libraries(pushkin_nikita counted gtest)
