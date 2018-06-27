@@ -34,8 +34,11 @@ public:
 	}
 	~circular_buffer()
 	{
-		for (const_iterator it = begin(); it != end(); it++) { (*it).~T(); }
-		operator delete(buffer);
+		if (!empty())
+		{
+			for (const_iterator it = begin(); it != end(); it++) { (*it).~T(); }
+			operator delete(buffer);
+		}
 	}
 	size_t size() const
 	{
@@ -51,7 +54,8 @@ public:
 	void push_back(T const &elem)
 	{
 		ensure_capacity();
-		new (&buffer[tail++]) T(elem);
+		new (&buffer[tail]) T(elem);
+		tail++;
 		tail %= capacity;
 	}
 	void push_front(T const &elem)
@@ -170,7 +174,7 @@ private:
 				}
 				catch (std::runtime_error &e)
 				{
-					for (int i = 0; i <= j; i++) { new_buffer[i].~T(); }
+					for (int i = 0; i < j; i++) { new_buffer[i].~T(); }
 					operator delete(new_buffer);
 				}
 			}
