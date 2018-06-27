@@ -496,6 +496,19 @@ TEST(fault_injection, non_throwing_default_ctor)
     });
 }
 
+TEST(fault_injection, push_back_1)
+{
+    faulty_run([]
+    {
+        container c;
+        c.push_back(1);
+        c.push_back(2);
+        c.push_back(3);
+        fault_injection_disable dg;
+        expect_eq(c, {1, 2, 3});
+    });
+}
+
 TEST(fault_injection, copy_ctor)
 {
     faulty_run([]
@@ -553,7 +566,7 @@ TEST(fault_injection, assignment_operator)
     });
 }
 
-TEST(fault_injection, push_back)
+TEST(fault_injection, push_back_2)
 {
     faulty_run([]
     {
