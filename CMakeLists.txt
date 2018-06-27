@@ -20,6 +20,9 @@ target_link_libraries(fedorova_irina counted gtest)
 add_executable(smirnov_roman smirnov_roman.cpp smirnov_roman.h)
 target_link_libraries(smirnov_roman counted gtest)
 
+#add_executable(anikienko_anton anikienko_anton.cpp anikienko_anton.h)
+#target_link_libraries(anikienko_anton counted gtest)
+
 add_executable(krivopaltsev_dmitriy krivopaltsev_dmitriy.cpp krivopaltsev_dmitriy.h)
 target_link_libraries(krivopaltsev_dmitriy counted gtest)
 
@@ -37,3 +40,12 @@ target_link_libraries(savinov_nikita counted gtest)
 
 add_executable(pushkin_nikita pushkin_nikita.cpp pushkin_nikita.h)
 target_link_libraries(pushkin_nikita counted gtest)
+
+add_executable(valeev_nursan valeev_nursan.cpp valeev_nursan.h)
+target_link_libraries(valeev_nursan counted gtest)
+
+add_executable(ustinov_artem ustinov_artem.cpp ustinov_artem.h)
+target_link_libraries(ustinov_artem counted gtest)
+
+#add_executable(nefedov_dmitriy nefedov_dmitriy.cpp nefedov_dmitriy.h)
+#target_link_libraries(nefedov_dmitriy counted gtest)
