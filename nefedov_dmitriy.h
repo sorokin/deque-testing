@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <cassert>
+#include <iterator>
 
 template<class T>
 struct deque {
